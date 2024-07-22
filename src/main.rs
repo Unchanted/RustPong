@@ -39,7 +39,7 @@ pub fn main() {
 fn game_loop(context: &sdl2::Sdl,
              canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
 
-    let mut gs: GameState = initialize_game_state();
+    let mut gs: GameState;
     let mut event_pump = context.event_pump().unwrap();
     let ev = context.event().unwrap();
     ev.register_custom_event::<FrameEvent>().unwrap();
@@ -52,8 +52,15 @@ fn game_loop(context: &sdl2::Sdl,
             FRAME_DURATION
         }),
     );
-    while !gs.is_game_over {
-        handle_game_events(&mut gs, &mut event_pump, canvas); 
+    'game_loop: loop {
+        gs = initialize_game_state();
+        while !gs.is_game_over && !gs.is_game_restarted {
+            handle_game_events(&mut gs, &mut event_pump, canvas);
+            handle_ball_out_of_border(&mut gs); 
+        }
+        if !gs.is_game_restarted {
+            break 'game_loop;
+        }
     }
 }
 
@@ -83,6 +90,9 @@ fn handle_game_events(gs: &mut GameState, event_pump: &mut EventPump, canvas: &m
             Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
                 gs.racket_1.move_down();
             },
+            Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                gs.is_game_restarted = true;
+            },
             _ => {}
         }
     }
@@ -94,6 +104,7 @@ fn handle_collisions(gs: &mut GameState){
         if cp == 0 { gs.ball.direction = Direction::EAST; }
         else if cp > 0 { gs.ball.direction = Direction::SOUTHEAST; }
         else {gs.ball.direction = Direction::NORTHEAST; }
+        gs.ball.increase_speed();
     }
 
     if gs.ball.has_collision_with(&gs.racket_2) {
@@ -101,6 +112,7 @@ fn handle_collisions(gs: &mut GameState){
         if cp == 0 { gs.ball.direction = Direction::WEST; }
         else if cp > 0 { gs.ball.direction = Direction::SOUTHWEST; }
         else { gs.ball.direction = Direction::NORTHWEST; }
+        gs.ball.increase_speed();
     }
 
     if gs.ball.has_collision_with_ceiling() {
@@ -117,6 +129,19 @@ fn handle_collisions(gs: &mut GameState){
         }else {
             gs.ball.direction = Direction::NORTHEAST;
         }
+    }
+}
+
+fn handle_ball_out_of_border(gs: &mut GameState){
+    if gs.ball.pos_x < 0 {
+        gs.score_p2 += 1;
+        println!("p2 scored!, total: {}-{}", gs.score_p1, gs.score_p2);
+        gs.reset_positions();
+    }
+    else if gs.ball.pos_x > WINDOW_WIDTH as i32 {
+        gs.score_p1 += 1;
+        println!("p1 score!, total: {}-{}", gs.score_p1, gs.score_p2);
+        gs.reset_positions();
     }
 }
 
