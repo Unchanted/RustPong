@@ -1,15 +1,28 @@
 use crate::WINDOW_WIDTH;
 use crate::WINDOW_HEIGHT;
 use crate::SCREEN_MARGIN;
-use crate::RACKET_HEIGHT;
-use crate::RACKET_WIDTH;
 
-// Racket's general speed in pixels per frame.
-const RACKET_SPEED: i32 = 10;
-const BALL_SPEED: f64 = 10.0;
+// Speed of the ball in terms of pixels/frame.
+const BALL_SPEED: i32 = 10;
+
+// Set the racket speed as 90% of the ball speed.
+const RACKET_SPEED: i32 = ((BALL_SPEED as f32) * 0.9) as i32;
+const RACKET_WIDTH: u32 = 10;
+const RACKET_HEIGHT: u32 = WINDOW_HEIGHT / 8;
 
 use sdl2::pixels::Color;
-use vector2d::Vector2D;
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum Direction {
+    NORTH,
+    SOUTH,
+    EAST,
+    WEST,
+    NORTHWEST,
+    NORTHEAST,
+    SOUTHWEST,
+    SOUTHEAST,
+}
 
 pub struct GameState {
     pub ball: Ball,
@@ -23,34 +36,35 @@ pub struct Ball {
     pub pos_x: i32,
     pub pos_y: i32,
     pub radius: i32,
-    pub direction: Vector2D<f64>,
-    pub speed: f64, // the number of pixels/frame
+    pub direction: Direction,
+    pub speed: i32, // the number of pixels/frame
     pub color: sdl2::pixels::Color,
-}
-
-impl ToString for Ball {
-    fn to_string(&self) -> String {
-        return format!(
-            "({},{}), radius: {}, speed: {}, direction: ({},{})",
-            self.pos_x,
-            self.pos_y,
-            self.radius,
-            self.speed,
-            self.direction.x,
-            self.direction.y
-        );
-    }
 }
 
 impl Ball {
     pub fn update_position(&mut self) {
-        self.pos_x = self.pos_x +(self.speed * self.direction.x) as i32;
-        self.pos_y = self.pos_y + (self.speed * self.direction.y) as i32;
-    }
-
-    pub fn inverse_direction(&mut self){
-        self.direction.x = self.direction.x * -1.0;
-        self.direction.y = self.direction.y * -1.0;
+        match self.direction {
+            Direction::NORTH => { self.pos_y -= self.speed; }
+            Direction::SOUTH => { self.pos_y += self.speed; }
+            Direction::WEST => { self.pos_x -= self.speed; }
+            Direction::EAST => { self.pos_x += self.speed; }
+            Direction::NORTHEAST => {
+                self.pos_x += self.speed;
+                self.pos_y -= self.speed;
+            }
+            Direction::NORTHWEST => {
+                self.pos_x -= self.speed;
+                self.pos_y -= self.speed;
+            }
+            Direction::SOUTHEAST => {
+                self.pos_x += self.speed;
+                self.pos_y += self.speed;
+            }
+            Direction::SOUTHWEST => {
+                self.pos_x -= self.speed;
+                self.pos_y += self.speed;
+            }
+        }
     }
 
     /*
@@ -83,12 +97,19 @@ impl Ball {
         return corner_distance_sq <= (self.radius^2) as u32;
     }
 
-    pub fn get_angle_from_collision_with(self, racket: &Racket) -> f64 {
+    pub fn collision_point_with(self, racket: &Racket) -> i32 {
+        if self.pos_y == racket.pos_y + racket.height as i32 / 2 {
+            return 0;
+        }
+        return if self.pos_y > racket.pos_y + racket.height as i32 / 2  { 1 } else { - 1 };
+    }
 
-        // distance between the ball and the middle of the racket.
-        let d = racket.pos_y + (racket.height / 2) as i32 - self.pos_y;
+    pub fn has_collision_with_ceiling(self) -> bool {
+        return self.pos_y - self.radius <= 0;
+    }
 
-        return (d as f64 / (racket.height as f64 / 2.0)) * 90.0;
+    pub fn has_collision_with_floor(self) -> bool {
+        return self.pos_y + self.radius >= WINDOW_HEIGHT as i32;
     }
 }
 
@@ -121,7 +142,7 @@ pub fn initialize_game_state() -> GameState {
             WINDOW_WIDTH as i32 / 2,
             WINDOW_HEIGHT as i32 / 2,
             10,
-            Vector2D::new(1.0, 0.0),
+            Direction::EAST,
             BALL_SPEED,
             Color::RGB(255,140,0),
         ),
@@ -156,7 +177,7 @@ pub fn initialize_racket(x: i32, y: i32, h: u32, w: u32, s: i32, c: Color) -> Ra
     };
 }
 
-pub fn initialize_ball(x: i32, y: i32, r: i32, d: Vector2D<f64>, s: f64, c: Color) -> Ball {
+pub fn initialize_ball(x: i32, y: i32, r: i32, d: Direction, s: i32, c: Color) -> Ball {
     return Ball {
         pos_x: x,
         pos_y: y,
@@ -166,3 +187,4 @@ pub fn initialize_ball(x: i32, y: i32, r: i32, d: Vector2D<f64>, s: f64, c: Colo
         color: c,
     };
 }
+

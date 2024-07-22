@@ -15,9 +15,6 @@ const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 600;
 const WINDOW_TITLE: &str = "pong";
 
-const RACKET_WIDTH: u32 = 10;
-const RACKET_HEIGHT: u32 = WINDOW_HEIGHT / 10;
-
 const SCREEN_MARGIN: i32 = 10;
 
 const FRAME_DURATION: u32 = 50;
@@ -56,34 +53,24 @@ fn game_loop(context: &sdl2::Sdl,
         }),
     );
     while !gs.is_game_over {
-        handle_game_events(&mut gs, &mut event_pump);
+        handle_game_events(&mut gs, &mut event_pump, canvas); 
+    }
+}
+
+fn handle_game_events(gs: &mut GameState, event_pump: &mut EventPump, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>){
+    let event = event_pump.wait_event();
+    if event.is_user_event() {
+        handle_collisions(gs);
 
         gs.ball.update_position();
 
-        if gs.ball.has_collision_with(&gs.racket_1) {
-            println!("ball: {}", gs.ball.to_string());
-            //println!("collision angle {}", gs.ball.get_angle_from_collision_with(&gs.racket_1));
-            gs.ball.inverse_direction();
-        }
+        update_cpu_racket(gs);
 
-        if gs.ball.has_collision_with(&gs.racket_2) {
-            //println!("collision angle {}", gs.ball.get_angle_from_collision_with(&gs.racket_2));
-            println!("ball: {}", gs.ball.to_string());
-            gs.ball.inverse_direction();
-        }
-
-        // draw the game
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
         draw_game(&gs, canvas);
         canvas.present();
-    }
-}
 
-fn handle_game_events(gs: &mut GameState, event_pump: &mut EventPump){
-    let event = event_pump.wait_event();
-    if event.is_user_event() {
-        //
     }else {
         match event {
             Event::Quit {..} |
@@ -99,5 +86,49 @@ fn handle_game_events(gs: &mut GameState, event_pump: &mut EventPump){
             _ => {}
         }
     }
+}
 
+fn handle_collisions(gs: &mut GameState){
+    if gs.ball.has_collision_with(&gs.racket_1) {
+        let cp = gs.ball.collision_point_with(&gs.racket_1);
+        if cp == 0 { gs.ball.direction = Direction::EAST; }
+        else if cp > 0 { gs.ball.direction = Direction::SOUTHEAST; }
+        else {gs.ball.direction = Direction::NORTHEAST; }
+    }
+
+    if gs.ball.has_collision_with(&gs.racket_2) {
+        let cp = gs.ball.collision_point_with(&gs.racket_2);
+        if cp == 0 { gs.ball.direction = Direction::WEST; }
+        else if cp > 0 { gs.ball.direction = Direction::SOUTHWEST; }
+        else { gs.ball.direction = Direction::NORTHWEST; }
+    }
+
+    if gs.ball.has_collision_with_ceiling() {
+        if gs.ball.direction == Direction::NORTHWEST {
+            gs.ball.direction = Direction::SOUTHWEST;
+        }else {
+            gs.ball.direction = Direction::SOUTHEAST;
+        }
+    }
+
+    if gs.ball.has_collision_with_floor() {
+        if gs.ball.direction == Direction::SOUTHWEST {
+            gs.ball.direction = Direction::NORTHWEST;
+        }else {
+            gs.ball.direction = Direction::NORTHEAST;
+        }
+    }
+}
+
+fn update_cpu_racket(gs: &mut GameState) {
+    if gs.ball.direction == Direction::SOUTH ||
+        gs.ball.direction == Direction::SOUTHWEST ||
+        gs.ball.direction == Direction::SOUTHEAST {
+            gs.racket_2.pos_y += gs.racket_2.speed;
+        }
+    if gs.ball.direction == Direction::NORTH ||
+        gs.ball.direction == Direction::NORTHEAST ||
+        gs.ball.direction == Direction::NORTHWEST {
+            gs.racket_2.pos_y -= gs.racket_2.speed;
+        }
 }
