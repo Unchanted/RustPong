@@ -1,20 +1,23 @@
 extern crate sdl2;
-use crate::sdl2::gfx::primitives::DrawRenderer;
+
+use crate::entity::*;
+use crate::view::*;
+
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
+mod entity;
+mod view;
 
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 600;
 const WINDOW_TITLE: &str = "pong";
 
-struct Ball {
-    pos_x: i32,
-    pos_y: i32,
-    radius: i32,
-    color: sdl2::pixels::Color,
-}
+const RACKET_WIDTH: u32 = 10;
+const RACKET_HEIGHT: u32 = WINDOW_HEIGHT / 10;
+
+const SCREEN_MARGIN: i32 = 10;
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -36,8 +39,20 @@ fn game_loop(context: &sdl2::Sdl,
     canvas.set_draw_color(Color::BLACK);
     canvas.clear();
 
-    let ball: Ball = initialize_ball();
-
+    let ball: Ball = initialize_ball(
+        WINDOW_WIDTH as i32 / 2,
+        WINDOW_HEIGHT as i32 / 2,
+        10,
+        Color::RGB(255,140,0)
+    );
+    let r_1: Racket = initialize_racket(
+        SCREEN_MARGIN,
+        (WINDOW_HEIGHT / 2  - RACKET_HEIGHT / 2) as i32,
+        RACKET_HEIGHT,
+        RACKET_WIDTH,
+        Color::WHITE
+    );
+    
     let mut event_pump = context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -49,21 +64,9 @@ fn game_loop(context: &sdl2::Sdl,
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
-        draw_ball(&ball,canvas);
+
+        draw_ball(&ball, canvas);
+        draw_racket(&r_1, canvas);
         canvas.present();
     }
-}
-
-fn draw_ball(ball: &Ball, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>){
-    canvas.circle(ball.pos_x as i16, ball.pos_y as i16, ball.radius as i16, ball.color);
-}
-
-fn initialize_ball() -> Ball {
-    return Ball {
-        pos_x: WINDOW_WIDTH as i32/ 2,
-        pos_y: WINDOW_HEIGHT as i32 / 2,
-        radius: 10,
-        color: Color::WHITE,
-    };
 }
