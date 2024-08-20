@@ -14,6 +14,7 @@ use sdl2::rect::Rect;
 
 const HALFWAY_LINE_DASHES: i32 = 20;
 
+/// Draw a racket object on the screen.
 fn draw_racket(racket: &Racket, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
     canvas.set_draw_color(racket.color);
     let rectangle: Rect = Rect::new(racket.pos_x, racket.pos_y, racket.width, racket.height);
@@ -23,6 +24,7 @@ fn draw_racket(racket: &Racket, canvas: &mut sdl2::render::Canvas<sdl2::video::W
     }
 }
 
+/// Draw a ball object on the screen.
 fn draw_ball(ball: &Ball, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
     canvas.set_draw_color(ball.color);
     let r = canvas.filled_circle(
@@ -36,27 +38,28 @@ fn draw_ball(ball: &Ball, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>
     }
 }
 
+/// Draw the line separating the two players at the middle of the screen.
 pub fn draw_halfway_line(canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
     canvas.set_draw_color(Color::WHITE);
     let middle_x = (WINDOW_WIDTH / 2) as i32 - 2;
     let dash_length = WINDOW_HEIGHT as i32 / (HALFWAY_LINE_DASHES * 2);
     let margin_top = dash_length / 2;
-    for i in 0..(HALFWAY_LINE_DASHES * 2) {
-        if i % 2 == 0 {
-            let p1 = Point::new(middle_x, margin_top + i * dash_length);
-            let p2 = Point::new(middle_x, margin_top + i * dash_length + dash_length);
-            let r = canvas.draw_line(p1, p2);
-            if r.is_err() {
-                panic!(
-                    "Attempted to draw halfway line dash from {} to {}.",
-                    margin_top + i * dash_length,
-                    margin_top + i * dash_length + dash_length
-                );
-            }
+
+    for i in (0..HALFWAY_LINE_DASHES * 2).step_by(2) {
+        let p1 = Point::new(middle_x, margin_top + i * dash_length);
+        let p2 = Point::new(middle_x, margin_top + i * dash_length + dash_length);
+        let r = canvas.draw_line(p1, p2);
+        if r.is_err() {
+            panic!(
+                "Attempted to draw halfway line dash from {} to {}.",
+                margin_top + i * dash_length,
+                margin_top + i * dash_length + dash_length
+            );
         }
     }
 }
 
+/// Draw the score for the two players.
 pub fn draw_score(gs: &GameState, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
     let ttf_context = sdl2::ttf::init().expect("SDL TTF initialization failed");
     let texture_creator = canvas.texture_creator();
@@ -103,6 +106,7 @@ pub fn draw_score(gs: &GameState, canvas: &mut sdl2::render::Canvas<sdl2::video:
     canvas.copy(&texture_p2, None, font_rect_p2).unwrap();
 }
 
+/// Draw all elements for the game.
 pub fn draw_game(gs: &GameState, canvas: &mut sdl2::render::Canvas<sdl2::video::Window>) {
     draw_halfway_line(canvas);
     draw_score(&gs, canvas);
